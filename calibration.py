@@ -26,20 +26,14 @@ class Calibration():
         self.fundamental_mat = None
 
     def print_params(self):
-        print 'LEFT:'
-        print 'cameraMatrix1:'
-        print self.camera_mat.left
-        print 'distortion coefficients1:'
-        print self.distortion_coeffs.left
-        print 'RIGHT:'
-        print 'cameraMatrix2:'
-        print self.camera_mat.right
-        print 'distortion coefficients2:'
-        print self.distortion_coeffs.right
-        print 'rotation matrix: %s' % self.rotation_mat
-        print 'translation matrix: %s' % self.translation_vec
-        print 'essential matrix: %s' % self.essential_mat
-        print 'fundamental matrix: %s' % self.fundamental_mat
+        print 'left camera matrix:\n%s' % self.camera_mat.left
+        print 'left distortion coefficients:' % self.distortion_coeffs.left
+        print 'right camera matrix:\n%s' % self.camera_mat.right
+        print 'right distortion coefficients:' % self.distortion_coeffs.right
+        print 'rotation matrix: \n%s' % self.rotation_mat
+        print 'translation matrix: \n%s' % self.translation_vec
+        print 'essential matrix: \n%s' % self.essential_mat
+        print 'fundamental matrix: \n%s' % self.fundamental_mat
     
 
 def stereo_calibrate(obj_points, img_points, img_size):
@@ -51,7 +45,7 @@ def stereo_calibrate(obj_points, img_points, img_size):
     flags = (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST)
 #    flags = cv2.CALIB_ZERO_TANGENT_DIST
     calib = Calibration()
-    print 'Calibrating...'
+    print 'calibrating...'
     (retval,
      calib.camera_mat.left, calib.distortion_coeffs.left,
      calib.camera_mat.right, calib.distortion_coeffs.right,
@@ -70,44 +64,43 @@ def stereo_calibrate(obj_points, img_points, img_size):
                                                   criteria=criteria, 
                                                   flags=flags)
     if retval:
+        print '[SUCCESS] calibration done'
         calib.print_params()
     else:
-        print 'Calibration failed'
+        print '[ERROR] calibration failed'
     
 def capture_chessboard(input_dir, stereo_pair_num, rows, cols):
     """
     Detect chessboard pattern and find corners from stereo image pairs
 
     Args:
-        inputDir: the directory containing the stereo image pairs with the chessboard pattern
-        stereoPairNum: number of stereo pairs to be captured under the directory
+        input_dir: the directory containing the stereo image pairs with the chessboard pattern
+        stereo_pair_num: number of stereo pairs to be captured under the directory
         rows: number of rows of inner corners per chessboard pattern
         cols: number of colr of inner corners per chessboard pattern
-        refineCorners: True if we refine the corner position using cornerSubPix()
 
     Returns:
         A tuple containing (img_points_left, img_points_right), where
         img_points_left: image coordinates of the corners in the left chessboard
         img_points_right: image coordinates of the corners in the right chessboard
     """
-    imgPointsL = []
-    imgPointsR = []
-    objPointsPerPattern = calc_object_points(28, rows, cols)
+    img_points_left = []
+    img_points_right = []
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    print 'Start capturing chessboard...'
+    print 'start capturing chessboard...'
     for x in range(0, stereo_pair_num):
-        pathL = os.path.join(input_dir, "{0}L.jpg".format(x))
-        pathR = os.path.join(input_dir, "{0}R.jpg".format(x))
+        path_left = os.path.join(input_dir, "{0}L.jpg".format(x))
+        path_right = os.path.join(input_dir, "{0}R.jpg".format(x))
 
-        imgL = cv2.imread(pathL, 0)
-        imgR = cv2.imread(pathR, 0)
+        img_left = cv2.imread(path_left, 0)
+        img_right = cv2.imread(path_right, 0)
 
-        foundL, cornersL = cv2.findChessboardCorners(imgL, (rows, cols))
-        foundR, cornersR = cv2.findChessboardCorners(imgR, (rows, cols))
+        found_left, corners_left = cv2.findChessboardCorners(img_left, (rows, cols))
+        found_right, corners_right = cv2.findChessboardCorners(img_right, (rows, cols))
 
-        if foundL and foundR:
-            cv2.cornerSubPix(imgL, cornersL, (11, 11), (-1, -1), criteria)
-            cv2.cornerSubPix(imgR, cornersR, (11, 11), (-1, -1), criteria)
+        if found_left and found_right:
+            cv2.cornerSubPix(img_left, corners_left, (11, 11), (-1, -1), criteria)
+            cv2.cornerSubPix(img_right, corners_right, (11, 11), (-1, -1), criteria)
 
             # Draw corners
 #             cv2.drawChessboardCorners(imgL, (rows, cols), cornersL, foundL)
@@ -117,16 +110,16 @@ def capture_chessboard(input_dir, stereo_pair_num, rows, cols):
 #            print 'Detected pattern in %s and %s' % (pathL, pathR)
 
             # Add to the points list
-            imgPointsL.append(cornersL.reshape(-1, 2))
-            imgPointsR.append(cornersR.reshape(-1, 2))
+            img_points_left.append(corners_left.reshape(-1, 2))
+            img_points_right.append(corners_right.reshape(-1, 2))
 
         else:
-            print '[ERROR] Chessboard pattern not found in the %dth pair' % x
+            print '[ERROR] chessboard pattern not found in the %dth pair' % x
 
-    print '[SUCCESS] Chessboard capture done!'
+    print '[SUCCESS] chessboard capture done'
     cv2.destroyAllWindows()
 
-    return (imgPointsL, imgPointsR)
+    return (img_points_left, img_points_right)
 
 def calc_object_points(square_size, rows, cols):
     """
