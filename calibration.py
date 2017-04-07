@@ -178,22 +178,27 @@ def show_corners(input_dir, rows, cols, img_points):
 
         
 
-def draw_epipolarlines(img_left, img_right, img_points, fundamental_mat):
-    lines = cv2.computeCorrespondEpilines(img_right.reshape(-1, 2), 2, fundamental_mat)
+def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_mat):
+    lines = cv2.computeCorrespondEpilines(img_points_right.reshape(-1, 2), 2, fundamental_mat)
     lines = lines.reshape(-1, 3)
 
     row, col = img_left.shape
-    ep_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    for param, point in zip(lines, img_points):
+    ep_img = cv2.cvtColor(img_left, cv2.COLOR_GRAY2BGR)
+    counter = 0
+    interval = 10
+    for param, point_left in zip(lines, img_points_left):
+        counter += 1
+        if counter % interval != 0:
+            continue
         color = tuple(np.random.randint(0, 255, 3).tolist())
         (x0, y0) = map(int, [0, -param[2] / param[1]])
-        (x1, y1) = map(int, [col, -(param[2] + parm[0] * col) / param[1]])
+        (x1, y1) = map(int, [col, -(param[2] + param[0] * col) / param[1]])
         
         ep_img = cv2.line(ep_img, (x0, y0), (x1, y1), color, 1)
-        ep_img = cv2.circle(ep_img, tuple((point[:, 0], point[:, 1])), 4, color, 1)
+        ep_img = cv2.circle(ep_img, tuple((point_left[:, 0], point_left[:, 1])), 4, color, 1)
         
     cv2.imshow('epipolar lines', ep_img)
-    cv2.waitkey(0)
+    cv2.waitKey(0)
 
 def stereo_rectify(calib):
     print 'perform rectification and undistortion...'
@@ -295,7 +300,7 @@ if __name__ == "__main__":
 
 #    show_corners(input_dir, 6, 8, StereoPair(img_points_left, img_points_right))
     stereo_rectify(calib)
-    stereo_remap(input_dir, rows, cols, calib, img_num)
+#    stereo_remap(input_dir, rows, cols, calib, img_num)
 
     print calib
     calib.save('calib_result.pkl')
@@ -303,5 +308,24 @@ if __name__ == "__main__":
     image_points = StereoPair(img_points_left, img_points_right)
     pickle.dump(image_points, open("image_points.pkl", "wb"))
     pickle.dump(obj_points_all, open("object_points.pkl", "wb"))
-    
 
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+    for x in range(0, 50):
+        path_left = os.path.join(input_dir, "{0}L.jpg".format(x))
+        path_right = os.path.join(input_dir, "{0}R.jpg".format(x))
+
+        img_left = cv2.imread(path_left, 0)
+        img_right = cv2.imread(path_right, 0)
+
+        found_left, corners_left = cv2.findChessboardCorners(img_left, (rows, cols))
+        found_right, corners_right = cv2.findChessboardCorners(img_right, (rows, cols))
+
+
+
+        if found_left and found_right:
+            cv2.cornerSubPix(img_left, corners_left, (11, 11), (-1, -1), criteria)
+            cv2.cornerSubPix(img_right, corners_right, (11, 11), (-1, -1), criteria)
+            draw_epipolarlines(img_left, corners_left, corners_right, calib.fundamental_mat)
+            
