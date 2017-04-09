@@ -3,10 +3,10 @@
 import cv2
 import numpy as np
 
-left_cam_id = 2
-right_cam_id = 1
-width = 680
-height = 480
+left_cam_id = 1
+right_cam_id = 2
+width = 480
+height = 320
 
 def show_camera(cam_id, width, height):
     """
@@ -57,5 +57,5 @@ def show_cameras(left, right, width, height):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-#    show_cameras(left_cam_id, right_cam_id, width, height)
-    show_camera(0, width, height)
+    show_cameras(left_cam_id, right_cam_id, width, height)
+#    show_camera(0, width, height)

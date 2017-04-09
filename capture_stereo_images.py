@@ -37,18 +37,35 @@ def capture_stereo_images(left_cam, right_cam, width, height, image_pair_num, ou
     cap_right.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
     count = 0
+    flags = (cv2.CALIB_CB_FAST_CHECK)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    rows = 6
+    cols = 8
     while count < image_pair_num:
         ret1, img1 = cap_left.read()
         ret2, img2 = cap_right.read()
         # Wait until ret1 and ret2 are true since camera setup needs some time.
         if ret1 and ret2:
-            cv2.imshow("stereo cameras", np.hstack((img1, img2)))
-             
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+            img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+            found_left, corners_left = cv2.findChessboardCorners(img1_gray, (rows, cols), flags)
+            found_right, corners_right = cv2.findChessboardCorners(img2_gray, (rows, cols), flags)
+            if found_left and found_right:
+#                cv2.cornerSubPix(img1_gray, corners_left, (11, 11), (-1, -1), criteria)
+#                cv2.cornerSubPix(img2_gray, corners_right, (11, 11), (-1, -1), criteria)
 
+                img1_gray = cv2.cvtColor(img1_gray, cv2.COLOR_GRAY2BGR)
+                img2_gray = cv2.cvtColor(img2_gray, cv2.COLOR_GRAY2BGR)
+        
+                cv2.drawChessboardCorners(img1_gray, (rows, cols), corners_left, found_left)
+                cv2.drawChessboardCorners(img2_gray, (rows, cols), corners_right, found_right)
+
+
+#            cv2.imshow("stereo cameras", np.hstack((img1, img2)))
+            cv2.imshow("stereo cameras", np.hstack((img1_gray, img2_gray)))
+             
         # When space key is pressed, save the image of left and right respectively
-        if cv2.waitKey(1) & 0xFF == ord(' '):
+        if ret1 and ret2 and cv2.waitKey(1) & 0xFF == ord(' '):
             save_images(img1, img2, count)
             count = count + 1
 
@@ -73,11 +90,13 @@ def print_prompt(output_dir):
     print 'Images will be saved in %s' % output_dir
 
 if __name__ == "__main__":
-    output_dir = './images/'
+    output_dir = './images_320x240/'
     left_cam = 1
     right_cam = 2
-    width = 480
-    height = 320
+    width = 320
+    height = 240
+#     width = 800
+#     height = 600
     image_pair_num = 50
 
     print_prompt(output_dir)

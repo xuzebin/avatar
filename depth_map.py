@@ -43,6 +43,7 @@ class BlockMatcher():
         self.disp12_max_diff = 1
         self.p1 = 8 * 3 * self.block_size**2
         self.p2 = 32 * 3 * self.block_size**2
+        self.prefilter_cap = 0
 
     def __str__(self):
         return '\n'.join('%s: %s' % item for item in vars(self).items())
@@ -51,7 +52,8 @@ class BlockMatcher():
         pickle.dump(self, open(file_name, "wb"))
         print ('blockmathcer result saved into %s' % file_name)
 
-bm = pickle.load(open('blockMatcher.pkl', 'rb'))
+#bm = pickle.load(open('blockMatcher.pkl', 'rb'))
+bm = BlockMatcher()
 
 stereo = cv2.StereoSGBM_create(minDisparity = bm.min_disparity,
                                numDisparities = bm.num_disparities,
@@ -61,7 +63,8 @@ stereo = cv2.StereoSGBM_create(minDisparity = bm.min_disparity,
                                speckleRange = bm.speckle_range,
                                disp12MaxDiff = bm.disp12_max_diff,
                                P1 = bm.p1,
-                               P2 = bm.p2
+                               P2 = bm.p2,
+                               preFilterCap = bm.prefilter_cap
                                )
 
 def on_min_disparity(position):
@@ -119,6 +122,11 @@ def on_speckle_range(position):
     stereo.setSpeckleRange(position)
     bm.speckle_range = position
 
+def on_prefilter_cap(position):
+    print ('on_prefilter_cap %s' % position)
+    stereo.setPreFilterCap(position)
+    bm.prefilter_cap = position
+
 # window_size = 3
 # min_disp = 16
 # num_disp = 112-min_disp
@@ -142,7 +150,7 @@ cv2.createTrackbar("P2", "disparity", bm.p2, 500, on_p2)
 cv2.createTrackbar("uniquenessRatio", "disparity", bm.uniqueness_ratio, 100, on_uniqueness_ratio)
 #cv2.createTrackbar("speckleWindowSize", "disparity", bm.speckle_window_size, 1000, on_speckle_window_size)
 #cv2.createTrackbar("speckleRange", "disparity", bm.speckle_range, 1000, on_speckle_range)
-
+cv2.createTrackbar("preFilterCap", "disparity", bm.prefilter_cap, 100, on_prefilter_cap)
 # while True:
 #     disparity = stereo.compute(imgL,imgR)
 #     # Normalize the image for representation
