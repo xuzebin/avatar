@@ -36,6 +36,10 @@ class Calibration():
         self.rectify_map = StereoPair()
         self.rms = None
         self.Q = None
+        self.r1 = None
+        self.r2 = None
+        self.p1 = None
+        self.p2 = None
         
     def __str__(self):
         return '\n'.join('%s: %s' % item for item in vars(self).items())
@@ -59,32 +63,26 @@ def stereo_calibrate(obj_points, img_points, img_size):
     calib.img_size = img_size
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 1000, 1e-5)
-    flags = 0
+#    flags = 0
+#     flags= (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_K3 + cv2.CALIB_FIX_K4 + cv2.CALIB_FIX_K5 + cv2.CALIB_FIX_K6)
 
-    # calibrate left camera
-    rms1, calib.camera_mat.left, calib.distortion_coeffs.left, rvecs1, tvecs1 = cv2.calibrateCamera(obj_points, img_points.left, img_size, criteria, flags)
-    # calibrate right camera
-    rms2, calib.camera_mat.right, calib.distortion_coeffs.right, rvecs2, tvecs2 = cv2.calibrateCamera(obj_points, img_points.right, img_size, criteria, flags)
+#     # calibrate left camera
+#     rms1, calib.camera_mat.left, calib.distortion_coeffs.left, rvecs1, tvecs1 = cv2.calibrateCamera(obj_points, img_points.left, img_size, criteria, flags)
+#     # calibrate right camera
+#     rms2, calib.camera_mat.right, calib.distortion_coeffs.right, rvecs2, tvecs2 = cv2.calibrateCamera(obj_points, img_points.right, img_size, criteria, flags)
 
-    print 'left camera calibration:'
-    print 'rms1" %s' % rms1
-    print 'mtx1" %s' % calib.camera_mat.left
-    print 'dist1" %s' % calib.distortion_coeffs.left
+#     print 'left camera calibration:'
+#     print 'rms1" %s' % rms1
+#     print 'mtx1" %s' % calib.camera_mat.left
+#     print 'dist1" %s' % calib.distortion_coeffs.left
 
-    print 'right camera calibration:'
-    print 'rms2" %s' % rms2
-    print 'mtx2" %s' % calib.camera_mat.right
-    print 'dist2" %s' % calib.distortion_coeffs.right
+#     print 'right camera calibration:'
+#     print 'rms2" %s' % rms2
+#     print 'mtx2" %s' % calib.camera_mat.right
+#     print 'dist2" %s' % calib.distortion_coeffs.right
 
 
-#    flags = (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_SAME_FOCAL_LENGTH)
-    flags = (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_FIX_INTRINSIC)
-#    flags = (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST)
-#    flags = cv2.CALIB_ZERO_TANGENT_DIST
-#    flags = (cv2.CALIB_FIX_INTRINSIC)
-    # Initial camera matrix
-#    calib.camera_mat.left = cv2.initCameraMatrix2D(obj_points, img_points.left, img_size, 0)
-#    calib.camera_mat.right = cv2.initCameraMatrix2D(obj_points, img_points.right, img_size, 0)
+    flags= (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_K3 + cv2.CALIB_FIX_K4 + cv2.CALIB_FIX_K5 + cv2.CALIB_FIX_K6)
     print 'calibrating...'
     (calib.rms,
      calib.camera_mat.left, calib.distortion_coeffs.left,
@@ -133,8 +131,6 @@ def capture_chessboard(input_dir, file_format, stereo_pair_num, rows, cols):
 #    flags = cv2.CALIB_CB_FAST_CHECK
     print 'start capturing chessboard from images in %s' % input_dir
     for x in range(0, stereo_pair_num):
-#        print 'reading: [%s] and [%s] ' % (file_format.left.format(idx=x), file_format.right.format(idx=x))
-
         path_left = os.path.join(input_dir, file_format.left.format(idx=x))
         path_right = os.path.join(input_dir, file_format.right.format(idx=x))
 
@@ -231,32 +227,28 @@ def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_
 def stereo_rectify(calib):
     print 'perform rectification and undistortion...'
 
-    # Change the img size for real-time concern
-    calib.img_size = (320, 240)
-
     (r1, r2, p1, p2, calib.Q, roi1, roi2) = cv2.stereoRectify(calib.camera_mat.left, 
-                                                                             calib.distortion_coeffs.left, 
-                                                                             calib.camera_mat.right, 
-                                                                             calib.distortion_coeffs.right,
-                                                                             calib.img_size,
-                                                                             calib.rotation_mat,
-                                                                             calib.translation_vec,
-                                                                             flags=0)
-#                                                                             alpha=0
-#    (p1, roi_left) = cv2.getOptimalNewCameraMatrix(calib.camera_mat.left, calib.distortion_coeffs.left, calib.img_size, 1, calib.img_size)
-#    (p2, roi_right) = cv2.getOptimalNewCameraMatrix(calib.camera_mat.right, calib.distortion_coeffs.right, calib.img_size, 1, calib.img_size)
+                                                              calib.distortion_coeffs.left, 
+                                                              calib.camera_mat.right, 
+                                                              calib.distortion_coeffs.right,
+                                                              calib.img_size,
+                                                              calib.rotation_mat,
+                                                              calib.translation_vec,
+                                                              flags=0,
+                                                              alpha=0
+                                                              )
+
+    calib.r1 = r1
+    calib.r2 = r2
+    calib.p1 = p1
+    calib.p2 = p2
+
 
     (calib.undistort_map.left, calib.rectify_map.left) = cv2.initUndistortRectifyMap(calib.camera_mat.left, calib.distortion_coeffs.left,
                                                                         r1, p1, calib.img_size, cv2.CV_32FC1)
 
     (calib.undistort_map.right, calib.rectify_map.right) = cv2.initUndistortRectifyMap(calib.camera_mat.right, calib.distortion_coeffs.right,
                                                                         r2, p2, calib.img_size, cv2.CV_32FC1)
-
-#     (calib.undistort_map.left, calib.rectify_map.left) = cv2.initUndistortRectifyMap(calib.camera_mat.left, calib.distortion_coeffs.left,
-#                                                                         None, newMat, calib.img_size, cv2.CV_32FC1)
-
-#     (calib.undistort_map.right, calib.rectify_map.right) = cv2.initUndistortRectifyMap(calib.camera_mat.right, calib.distortion_coeffs.right,
-#                                                                         None, newMat, calib.img_size, cv2.CV_32FC1)
 
     print '[SUCCESS] rectification and undistortion done'
 
@@ -275,9 +267,6 @@ def stereo_remap(input_dir, file_format, rows, cols, calib, img_num):
         
         img_left = cv2.remap(img_left_, calib.undistort_map.left, calib.rectify_map.left, cv2.INTER_LINEAR)
         img_right = cv2.remap(img_right_, calib.undistort_map.right, calib.rectify_map.right, cv2.INTER_LINEAR)
-        cv2.imshow("horizontal lines on stereo pair", np.hstack((img_left, img_right)))
-        print 'horizontal lines on the %dth pair' % x
-        cv2.waitKey(0)
 
 
         found_left, img_points_left = cv2.findChessboardCorners(img_left, (rows, cols))
@@ -292,9 +281,9 @@ def stereo_remap(input_dir, file_format, rows, cols, calib, img_num):
             print '[ERROR] corner not found in the rectified %sth pair' % x
         
         if found_left and found_left:
-            show_depthmap(img_left, img_right)
-            img_left = draw_horizontal_lines(img_left, img_points_left)
-            img_right = draw_horizontal_lines(img_right, img_points_right)
+            #show_depthmap(img_left, img_right)
+            img_left = draw_horizontal_lines(img_left)
+            img_right = draw_horizontal_lines(img_right)
             cv2.imshow("horizontal lines on stereo pair", np.hstack((img_left, img_right)))
             print 'horizontal lines on the %dth pair' % x
             cv2.waitKey(0)
@@ -316,51 +305,47 @@ def stereo_remap(input_dir, file_format, rows, cols, calib, img_num):
         else:
             print 'Not found in %dth pair' % x
 
-def draw_horizontal_lines(img, img_points, draw_point=True):
+def draw_horizontal_lines(img):
     """
-    Draw horizontal lines that pass img_points on img
+    Draw horizontal lines on img
 
     Args:
         img: the image to draw on
-        img_points: the image points that the horizontal lines pass through
-        draw_point: true if we want to circle the image points
 
     Return
-        the image with lines (and points) drawn
+        the image with lines drawn
     """
     row, col = img.shape
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    for point in img_points:
-        color = tuple(np.random.randint(0, 255, 3).tolist())
-        (x0, y0) = map(int, [0, point[:,1]])
-        (x1, y1) = map(int, [col, point[:,1]])
-        img = cv2.line(img, (x0, y0), (x1, y1), color, 1)
-        if draw_point:
-            img = cv2.circle(img, tuple((point[:, 0], point[:, 1])), 4, color, 1)
+    interval = row / 10
+    for i in range(1, 10):
+        (x0, y0) = map(int, [0, i * interval])
+        (x1, y1) = map(int, [col, i * interval])
+        img = cv2.line(img, (x0, y0), (x1, y1), (0, 255, 0), 1)
+
     return img
 
 
 if __name__ == "__main__":
-    input_dir = 'images_320x240/'
+    input_dir = 'checkerboards/'
 
     rows = 6
     cols = 8
-    img_num = 32#48#28
-#    file_format = StereoPair("left_{idx:02d}.ppm", "right_{idx:02d}.ppm")
+    img_num = 25#32#48#28
     file_format = StereoPair("{idx:d}L.jpg", "{idx:d}R.jpg")
     img_points_left, img_points_right = capture_chessboard(input_dir, file_format, img_num, rows, cols)
 
-    square_size = 28
+    square_size = 27#28
     obj_points = calc_object_points(square_size, rows, cols)
 
     obj_points_all = [obj_points for _ in range(len(img_points_left))]
 
-    img_size = (320, 240)#(800, 600)#(640, 480)# (weight, height) or (cols, row)
+    img_size = (640, 480)# (weight, height) or (cols, row)
     calib = stereo_calibrate(obj_points_all, StereoPair(img_points_left, img_points_right), img_size)
 
     show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
     stereo_rectify(calib)
-#    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
+    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
 
     print calib
     calib.save('calib_result.pkl')
@@ -371,35 +356,3 @@ if __name__ == "__main__":
 
 #    calib = pickle.load(open('calib_result.pkl', 'rb'))
 #    stereo_remap(input_dir, rows, cols, calib, img_num)
-
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 1e-6)
-    flags = (cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE + cv2.CALIB_CB_FAST_CHECK)
-    for x in range(0, 0):
-        path_left = os.path.join(input_dir, "{0}L.jpg".format(x))
-        path_right = os.path.join(input_dir, "{0}R.jpg".format(x))
-
-        img_left = cv2.imread(path_left, 0)
-        img_right = cv2.imread(path_right, 0)
-
-        found_left, corners_left = cv2.findChessboardCorners(img_left, (rows, cols))
-        found_right, corners_right = cv2.findChessboardCorners(img_right, (rows, cols))
-
-
-        if found_left and found_right:
-            cv2.cornerSubPix(img_left, corners_left, (11, 11), (-1, -1), criteria)
-            cv2.cornerSubPix(img_right, corners_right, (11, 11), (-1, -1), criteria)
-
-#            img_left = cv2.cvtColor(img_left, cv2.COLOR_GRAY2BGR)
-#            img_right = cv2.cvtColor(img_right, cv2.COLOR_GRAY2BGR)
-            
-#             cv2.drawChessboardCorners(img_left, (rows, cols), corners_left, True)
-#             cv2.drawChessboardCorners(img_right, (rows, cols), corners_right, True)
-#             cv2.imshow("corners", np.hstack((img_left, img_right)))
-#            print 'chessboard corners on the %dth pair' % x
-#            cv2.waitKey(0)
-
-            epi_left = draw_epipolarlines(img_left, corners_left, corners_right, calib.fundamental_mat, 2)
-            epi_right = draw_epipolarlines(img_right, corners_right, corners_left, calib.fundamental_mat, 1)
-            cv2.imshow("epipolar lines", np.hstack((epi_left, epi_right)))
-            print 'epipolar lines on the %dth pair' % x
-            cv2.waitKey(0)
