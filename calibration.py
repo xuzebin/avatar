@@ -4,7 +4,7 @@ import os
 import cv2
 import csv
 import numpy as np
-import pickle
+import yaml
 
 class StereoPair():
     """
@@ -22,7 +22,7 @@ class StereoPair():
 
 class Calibration():
     """
-    Stereo calibration results
+    Object that hold and manage the stereo calibration parameters
     """
     def __init__(self):
         self.camera_mat = StereoPair()
@@ -31,22 +31,42 @@ class Calibration():
         self.translation_vec = None
         self.essential_mat = None
         self.fundamental_mat = None
-        self.img_size = None
-        self.undistort_map = StereoPair()
-        self.rectify_map = StereoPair()
         self.rms = None
-        self.Q = None
-        self.r1 = None
-        self.r2 = None
-        self.p1 = None
-        self.p2 = None
         
     def __str__(self):
         return '\n'.join('%s: %s' % item for item in vars(self).items())
 
-    def save(self, file_name):
-        pickle.dump(self, open(file_name, "wb"))
-        print 'calibration result saved into %s' % file_name
+    def write(self, file_name):
+        """ Write the attributes (stereo params) to a yaml file """
+        stereo_params = {
+             "left_camera_matrix": self.camera_mat.left.tolist(),
+             "right_camera_matrix": self.camera_mat.right.tolist(),
+             "left_distortion_coefficients": self.distortion_coeffs.left.tolist(),
+             "right_distortion_coefficients": self.distortion_coeffs.right.tolist(),
+             "rotation_matrix": self.rotation_mat.tolist(),
+             "translation_vector": self.translation_vec.tolist(),
+             "essential_matrix": self.essential_mat.tolist(),
+             "fundamental_matrix": self.fundamental_mat.tolist(),
+             "rms": self.rms
+            }
+        with open(file_name, 'w') as f:
+            yaml.dump(stereo_params, f)
+            
+        print 'calibration parameters saved into %s' % file_name
+
+    def read(self, file_name):
+        """ Read the attributes (stereo params) to a yaml file """
+        with open(file_name, 'r') as f:
+            stereo_params = yaml.load(f)
+            
+            self.camera_mat = StereoPair(np.array(stereo_params["left_camera_matrix"]), np.array(stereo_params["right_camera_matrix"]))
+            self.distortion_coeffs = StereoPair(np.array(stereo_params["left_distortion_coefficients"]), np.array(stereo_params["right_distortion_coefficients"]))
+            self.rotation_mat = np.array(stereo_params["rotation_matrix"])
+            self.translation_vec = np.array(stereo_params["translation_vector"])
+            self.essential_mat = np.array(stereo_params["essential_matrix"])
+            self.fundamental_mat = np.array(stereo_params["fundamental_matrix"])
+            self.rms = stereo_params["rms"]
+
 
 def stereo_calibrate(obj_points, img_points, img_size):
     """
@@ -60,7 +80,6 @@ def stereo_calibrate(obj_points, img_points, img_size):
         Calibration instance with calibrated results or None if calibration failed
     """
     calib = Calibration()
-    calib.img_size = img_size
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 1000, 1e-5)
 #    flags = 0
@@ -200,8 +219,6 @@ def show_corners(input_dir, file_format, rows, cols, img_points):
 
         cv2.waitKey(0)
 
-        
-
 def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_mat, flag):
     lines = cv2.computeCorrespondEpilines(img_points_right.reshape(-1, 2), flag, fundamental_mat)
     lines = lines.reshape(-1, 3)
@@ -224,50 +241,67 @@ def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_
     return ep_img
 
 
-def stereo_rectify(calib):
-    print 'perform rectification and undistortion...'
+def get_rectify_map(calib, img_size):
+    """
+    Get the undistortion and rectification map given calibrated parameters and image's size
 
-    (r1, r2, p1, p2, calib.Q, roi1, roi2) = cv2.stereoRectify(calib.camera_mat.left, 
+    Args:
+        calib: the Calibration object
+        img_size: a tuple of image's size (width, height)
+
+    Returns:
+        a tuple of maps: (left_map1, left_map2, right_map1, right_map2)
+    """
+    (r1, r2, p1, p2, Q, roi1, roi2) = cv2.stereoRectify(calib.camera_mat.left, 
                                                               calib.distortion_coeffs.left, 
                                                               calib.camera_mat.right, 
                                                               calib.distortion_coeffs.right,
-                                                              calib.img_size,
+                                                              img_size,
                                                               calib.rotation_mat,
                                                               calib.translation_vec,
                                                               flags=0,
                                                               alpha=0
                                                               )
 
-    calib.r1 = r1
-    calib.r2 = r2
-    calib.p1 = p1
-    calib.p2 = p2
+    (left_map1, left_map2) = cv2.initUndistortRectifyMap(calib.camera_mat.left, calib.distortion_coeffs.left,
+                                                                        r1, p1, img_size, cv2.CV_32FC1)
 
+    (right_map1, right_map2) = cv2.initUndistortRectifyMap(calib.camera_mat.right, calib.distortion_coeffs.right,
+                                                                        r2, p2, img_size, cv2.CV_32FC1)
 
-    (calib.undistort_map.left, calib.rectify_map.left) = cv2.initUndistortRectifyMap(calib.camera_mat.left, calib.distortion_coeffs.left,
-                                                                        r1, p1, calib.img_size, cv2.CV_32FC1)
+    return (left_map1, left_map2, right_map1, right_map2)
 
-    (calib.undistort_map.right, calib.rectify_map.right) = cv2.initUndistortRectifyMap(calib.camera_mat.right, calib.distortion_coeffs.right,
-                                                                        r2, p2, calib.img_size, cv2.CV_32FC1)
+def undistort_rectify(calib, img1, img2):
+    """
+    Undistort and rectify a stereo image pair to make epipolar lines horizontal.
+    
+    Args:
+        calib: the Calibration object
+        img1: left image
+        img2: right image
 
-    print '[SUCCESS] rectification and undistortion done'
+    Returns:
+        a tuple of the undistored and rectified stereo images
+    """
+    if img1.shape != img2.shape:
+        raise ValueError('left and right images size not matched')
+    height, width = img1.shape
+    img_size = (width, height)
 
-def rectify(calib, img_left, img_right):
-    img_left = cv2.remap(img_left, calib.undistort_map.left, calib.rectify_map.left, cv2.INTER_LINEAR)
-    img_right = cv2.remap(img_right, calib.undistort_map.right, calib.rectify_map.right, cv2.INTER_LINEAR)
-    return (img_left, img_right)
+    (left_map1, left_map2, right_map1, right_map2) = get_rectify_map(calib, img_size)
+    img1 = cv2.remap(img1, left_map1, left_map2, cv2.INTER_LINEAR)
+    img2 = cv2.remap(img2, right_map1, right_map2, cv2.INTER_LINEAR)
+    return (img1, img2)
 
 def stereo_remap(input_dir, file_format, rows, cols, calib, img_num):
     for x in range(0, img_num):
         path_left = os.path.join(input_dir, file_format.left.format(idx=x))
         path_right = os.path.join(input_dir, file_format.right.format(idx=x))
 
-        img_left_ = cv2.imread(path_left, 0)
-        img_right_ = cv2.imread(path_right, 0)
-        
-        img_left = cv2.remap(img_left_, calib.undistort_map.left, calib.rectify_map.left, cv2.INTER_LINEAR)
-        img_right = cv2.remap(img_right_, calib.undistort_map.right, calib.rectify_map.right, cv2.INTER_LINEAR)
+        img_left = cv2.imread(path_left, 0)
+        img_right = cv2.imread(path_right, 0)
 
+        (img_left, img_right) = undistort_rectify(calib, img_left, img_right)
 
         found_left, img_points_left = cv2.findChessboardCorners(img_left, (rows, cols))
         found_right, img_points_right = cv2.findChessboardCorners(img_right, (rows, cols))
@@ -343,16 +377,9 @@ if __name__ == "__main__":
     img_size = (640, 480)# (weight, height) or (cols, row)
     calib = stereo_calibrate(obj_points_all, StereoPair(img_points_left, img_points_right), img_size)
 
-    show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
-    stereo_rectify(calib)
-    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
+#    show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
+#    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
 
     print calib
-    calib.save('calib_result.pkl')
+    calib.write('calib_params.yml')
 
-#     image_points = StereoPair(img_points_left, img_points_right)
-#     pickle.dump(image_points, open("image_points.pkl", "wb"))
-#     pickle.dump(obj_points_all, open("object_points.pkl", "wb"))
-
-#    calib = pickle.load(open('calib_result.pkl', 'rb'))
-#    stereo_remap(input_dir, rows, cols, calib, img_num)
