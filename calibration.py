@@ -20,18 +20,21 @@ class StereoPair():
     def __str__(self):
         return "left: %s\n right: %s\n" % (self.left, self.right)
 
-class Calibration():
+class StereoCamera():
     """
-    Object that hold and manage the stereo calibration parameters
+    Object that hold and manage the calibrated stereo camera parameters
     """
-    def __init__(self):
-        self.camera_mat = StereoPair()
-        self.distortion_coeffs = StereoPair()
-        self.rotation_mat = None
-        self.translation_vec = None
-        self.essential_mat = None
-        self.fundamental_mat = None
-        self.rms = None
+    def __init__(self, file_name = None):
+        if file_name is not None:
+            self.read(file_name)
+        else:
+            self.camera_mat = StereoPair()
+            self.distortion_coeffs = StereoPair()
+            self.rotation_mat = None
+            self.translation_vec = None
+            self.essential_mat = None
+            self.fundamental_mat = None
+            self.rms = None
         
     def __str__(self):
         return '\n'.join('%s: %s' % item for item in vars(self).items())
@@ -55,7 +58,7 @@ class Calibration():
         print 'calibration parameters saved into %s' % file_name
 
     def read(self, file_name):
-        """ Read the attributes (stereo params) to a yaml file """
+        """ Read the attributes (stereo params) from a yaml file """
         with open(file_name, 'r') as f:
             stereo_params = yaml.load(f)
             
@@ -77,9 +80,9 @@ def stereo_calibrate(obj_points, img_points, img_size):
         img_size: size of the left/right image
 
     Return:
-        Calibration instance with calibrated results or None if calibration failed
+        StereoCamera instance with calibrated results
     """
-    calib = Calibration()
+    cam = StereoCamera()
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 1000, 1e-5)
 #    flags = 0
@@ -103,29 +106,29 @@ def stereo_calibrate(obj_points, img_points, img_size):
 
     flags= (cv2.CALIB_FIX_ASPECT_RATIO + cv2.CALIB_ZERO_TANGENT_DIST + cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_K3 + cv2.CALIB_FIX_K4 + cv2.CALIB_FIX_K5 + cv2.CALIB_FIX_K6)
     print 'calibrating...'
-    (calib.rms,
-     calib.camera_mat.left, calib.distortion_coeffs.left,
-     calib.camera_mat.right, calib.distortion_coeffs.right,
-     calib.rotation_mat, 
-     calib.translation_vec, 
-     calib.essential_mat, 
-     calib.fundamental_mat) = cv2.stereoCalibrate(obj_points,
-                                                  img_points.left, img_points.right,
-                                                  calib.camera_mat.left, calib.distortion_coeffs.left,
-                                                  calib.camera_mat.right, calib.distortion_coeffs.right,
-                                                  img_size,
-                                                  None,
-                                                  None,
-                                                  None,
-                                                  None,
-                                                  criteria=criteria, 
-                                                  flags=flags)
-    print 'rms: %s' % calib.rms
-    if calib.rms < 1:
+    (cam.rms,
+     cam.camera_mat.left, cam.distortion_coeffs.left,
+     cam.camera_mat.right, cam.distortion_coeffs.right,
+     cam.rotation_mat, 
+     cam.translation_vec, 
+     cam.essential_mat, 
+     cam.fundamental_mat) = cv2.stereoCalibrate(obj_points,
+                                                img_points.left, img_points.right,
+                                                cam.camera_mat.left, cam.distortion_coeffs.left,
+                                                cam.camera_mat.right, cam.distortion_coeffs.right,
+                                                img_size,
+                                                None,
+                                                None,
+                                                None,
+                                                None,
+                                                criteria=criteria, 
+                                                flags=flags)
+    print 'rms: %s' % cam.rms
+    if cam.rms < 1:
         print '[SUCCESS] calibration done'
     else:
-        print '[ERROR] rms too high: %s' % calib.rms
-    return calib
+        print '[ERROR] rms too high: %s' % cam.rms
+    return cam
 
 def capture_chessboard(input_dir, file_format, stereo_pair_num, rows, cols):
     """
@@ -241,125 +244,6 @@ def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_
     return ep_img
 
 
-def get_rectify_map(calib, img_size):
-    """
-    Get the undistortion and rectification map given calibrated parameters and image's size
-
-    Args:
-        calib: the Calibration object
-        img_size: a tuple of image's size (width, height)
-
-    Returns:
-        a tuple of maps: (left_map1, left_map2, right_map1, right_map2)
-    """
-    (r1, r2, p1, p2, Q, roi1, roi2) = cv2.stereoRectify(calib.camera_mat.left, 
-                                                              calib.distortion_coeffs.left, 
-                                                              calib.camera_mat.right, 
-                                                              calib.distortion_coeffs.right,
-                                                              img_size,
-                                                              calib.rotation_mat,
-                                                              calib.translation_vec,
-                                                              flags=0,
-                                                              alpha=0
-                                                              )
-
-    (left_map1, left_map2) = cv2.initUndistortRectifyMap(calib.camera_mat.left, calib.distortion_coeffs.left,
-                                                                        r1, p1, img_size, cv2.CV_32FC1)
-
-    (right_map1, right_map2) = cv2.initUndistortRectifyMap(calib.camera_mat.right, calib.distortion_coeffs.right,
-                                                                        r2, p2, img_size, cv2.CV_32FC1)
-
-    return (left_map1, left_map2, right_map1, right_map2)
-
-def undistort_rectify(calib, img1, img2):
-    """
-    Undistort and rectify a stereo image pair to make epipolar lines horizontal.
-    
-    Args:
-        calib: the Calibration object
-        img1: left image
-        img2: right image
-
-    Returns:
-        a tuple of the undistored and rectified stereo images
-    """
-    if img1.shape != img2.shape:
-        raise ValueError('left and right images size not matched')
-    height, width = img1.shape
-    img_size = (width, height)
-
-    (left_map1, left_map2, right_map1, right_map2) = get_rectify_map(calib, img_size)
-    img1 = cv2.remap(img1, left_map1, left_map2, cv2.INTER_LINEAR)
-    img2 = cv2.remap(img2, right_map1, right_map2, cv2.INTER_LINEAR)
-    return (img1, img2)
-
-def stereo_remap(input_dir, file_format, rows, cols, calib, img_num):
-    for x in range(0, img_num):
-        path_left = os.path.join(input_dir, file_format.left.format(idx=x))
-        path_right = os.path.join(input_dir, file_format.right.format(idx=x))
-
-        img_left = cv2.imread(path_left, 0)
-        img_right = cv2.imread(path_right, 0)
-
-        (img_left, img_right) = undistort_rectify(calib, img_left, img_right)
-
-        found_left, img_points_left = cv2.findChessboardCorners(img_left, (rows, cols))
-        found_right, img_points_right = cv2.findChessboardCorners(img_right, (rows, cols))
-
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-        if found_left and found_right:
-            cv2.cornerSubPix(img_left, img_points_left, (11, 11), (-1, -1), criteria)
-            cv2.cornerSubPix(img_right, img_points_right, (11, 11), (-1, -1), criteria)
-        else:
-            print '[ERROR] corner not found in the rectified %sth pair' % x
-        
-        if found_left and found_left:
-            #show_depthmap(img_left, img_right)
-            img_left = draw_horizontal_lines(img_left)
-            img_right = draw_horizontal_lines(img_right)
-            cv2.imshow("horizontal lines on stereo pair", np.hstack((img_left, img_right)))
-            print 'horizontal lines on the %dth pair' % x
-            cv2.waitKey(0)
-
-            # Check quality
-            lines1 = cv2.computeCorrespondEpilines(img_points_right.reshape(-1,2), 2, calib.fundamental_mat)
-            lines1 = lines1.reshape(-1, 3)
-            lines2 = cv2.computeCorrespondEpilines(img_points_left.reshape(-1,2), 1, calib.fundamental_mat)
-            lines2 = lines2.reshape(-1, 3)
-            error = 0.0
-            for i in range(len(img_points_left)):
-                # lines2[i][:] = [a, b, c] line parameters
-                error += abs(img_points_left[i][0][0] * lines2[i][0] + img_points_left[i][0][1] * lines2[i][1] + lines2[i][2])
-                error += abs(img_points_right[i][0][0] * lines1[i][0] + img_points_right[i][0][1] * lines1[i][1] + lines1[i][2])
-
-            avg_error = error / (len(img_points_left) * 2)
-#            print 'avg_error: %s' % avg_error
-
-        else:
-            print 'Not found in %dth pair' % x
-
-def draw_horizontal_lines(img):
-    """
-    Draw horizontal lines on img
-
-    Args:
-        img: the image to draw on
-
-    Return
-        the image with lines drawn
-    """
-    row, col = img.shape
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    interval = row / 10
-    for i in range(1, 10):
-        (x0, y0) = map(int, [0, i * interval])
-        (x1, y1) = map(int, [col, i * interval])
-        img = cv2.line(img, (x0, y0), (x1, y1), (0, 255, 0), 1)
-
-    return img
-
-
 if __name__ == "__main__":
     input_dir = 'checkerboards/'
 
@@ -375,11 +259,11 @@ if __name__ == "__main__":
     obj_points_all = [obj_points for _ in range(len(img_points_left))]
 
     img_size = (640, 480)# (weight, height) or (cols, row)
-    calib = stereo_calibrate(obj_points_all, StereoPair(img_points_left, img_points_right), img_size)
+    cam = stereo_calibrate(obj_points_all, StereoPair(img_points_left, img_points_right), img_size)
 
 #    show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
 #    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
 
-    print calib
-    calib.write('calib_params.yml')
+    print cam
+    cam.write('calib_params.yml')
 

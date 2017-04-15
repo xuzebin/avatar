@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import calibration
-from calibration import Calibration, StereoPair
 import cv2
 import numpy as np
 import argparse
+from calibration import StereoCamera, StereoPair
+import rectification
 
 if __name__ == "__main__":
     """
@@ -22,16 +21,15 @@ if __name__ == "__main__":
     parser.add_argument('img2', help='right image')
     args = parser.parse_args()
 
-    calib = Calibration()
-
-    calib.read(args.calibration_file)
+    cam = StereoCamera(args.calibration_file)
 
     img1 = cv2.imread(args.img1, 0)
     img2 = cv2.imread(args.img2, 0)
 
-    (img1, img2) = calibration.undistort_rectify(calib, img1, img2)
+    (img1, img2) = rectification.undistort_rectify(cam, img1, img2)
 
-    img1 = calibration.draw_horizontal_lines(img1)
-    img2 = calibration.draw_horizontal_lines(img2)
+    img1 = rectification.draw_horizontal_lines(img1)
+    img2 = rectification.draw_horizontal_lines(img2)
+
     cv2.imshow("horizontal lines on stereo pair", np.hstack((img1, img2)))
     cv2.waitKey(0)
