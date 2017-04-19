@@ -17,7 +17,7 @@ make -j8
 
 ### Run
 ```
-./face_landmark_detection ../../data/shape_predictor_68_face_landmarks.dat
+./face_landmark_detection
 ```
 
 ## Face Landmarks positions
