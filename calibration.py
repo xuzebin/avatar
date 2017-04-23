@@ -245,11 +245,11 @@ def draw_epipolarlines(img_left, img_points_left, img_points_right, fundamental_
 
 
 if __name__ == "__main__":
-    input_dir = 'checkerboards/'
+    input_dir = 'checkerboards2/'
 
     rows = 6
     cols = 8
-    img_num = 25#32#48#28
+    img_num = 30#25#32#48#28
     file_format = StereoPair("{idx:d}L.jpg", "{idx:d}R.jpg")
     img_points_left, img_points_right = capture_chessboard(input_dir, file_format, img_num, rows, cols)
 
@@ -261,9 +261,9 @@ if __name__ == "__main__":
     img_size = (640, 480)# (weight, height) or (cols, row)
     cam = stereo_calibrate(obj_points_all, StereoPair(img_points_left, img_points_right), img_size)
 
-#    show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
-#    stereo_remap(input_dir, file_format, rows, cols, calib, img_num)
+    show_corners(input_dir, file_format, rows, cols, StereoPair(img_points_left, img_points_right))
+
 
     print cam
-    cam.write('calib_params.yml')
+    cam.write('calib_params2.yml')
 

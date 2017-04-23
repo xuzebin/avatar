@@ -53,9 +53,9 @@ def undistort_rectify(stereo_camera, img1, img2):
     img_size = (width, height)
 
     (left_map1, left_map2, right_map1, right_map2) = get_rectify_map(stereo_camera, img_size)
-    img1 = cv2.remap(img1, left_map1, left_map2, cv2.INTER_LINEAR)
-    img2 = cv2.remap(img2, right_map1, right_map2, cv2.INTER_LINEAR)
-    return (img1, img2)
+    img1_ = cv2.remap(img1, left_map1, left_map2, cv2.INTER_LINEAR)
+    img2_ = cv2.remap(img2, right_map1, right_map2, cv2.INTER_LINEAR)
+    return (img1_, img2_)
 
 def test_rectification(stereo_camera, input_dir, file_format, img_num):
     """ Undistort and rectify a group of stereo image pairs in a directory and display them with horizontal lines """
