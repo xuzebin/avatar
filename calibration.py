@@ -35,6 +35,7 @@ class StereoCamera():
             self.essential_mat = None
             self.fundamental_mat = None
             self.rms = None
+            self.img_size = None
         
     def __str__(self):
         return '\n'.join('%s: %s' % item for item in vars(self).items())
@@ -50,7 +51,8 @@ class StereoCamera():
              "translation_vector": self.translation_vec.tolist(),
              "essential_matrix": self.essential_mat.tolist(),
              "fundamental_matrix": self.fundamental_mat.tolist(),
-             "rms": self.rms
+             "rms": self.rms,
+             "image_size": self.img_size
             }
         with open(file_name, 'w') as f:
             yaml.dump(stereo_params, f)
@@ -69,6 +71,7 @@ class StereoCamera():
             self.essential_mat = np.array(stereo_params["essential_matrix"])
             self.fundamental_mat = np.array(stereo_params["fundamental_matrix"])
             self.rms = stereo_params["rms"]
+            self.img_size = stereo_params["image_size"]
 
 
 def stereo_calibrate(obj_points, img_points, img_size):
@@ -83,6 +86,7 @@ def stereo_calibrate(obj_points, img_points, img_size):
         StereoCamera instance with calibrated results
     """
     cam = StereoCamera()
+    cam.img_size = img_size
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 1000, 1e-5)
 #    flags = 0

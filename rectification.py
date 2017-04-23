@@ -5,33 +5,52 @@ import cv2
 import numpy as np
 from calibration import StereoCamera, StereoPair
 
-def get_rectify_map(stereo_camera, img_size):
+def get_rectify_map(stereo_camera, actural_img_size):
     """
     Get the undistortion and rectification map given calibrated parameters and image's size
 
     Args:
         stereo_camera: the StereoCamera object with calibrated parameters
-        img_size: a tuple of image's size (width, height)
+        actural_img_size: a tuple of image's size (can be resized)
 
     Returns:
         a tuple of maps: (left_map1, left_map2, right_map1, right_map2)
     """
+
+    # If actural_size is different from the size when doing calibration (stereo_camera.img_size),
+    # multiply fx, fy, cx, cy in camera intrinsic matrix by the scaling factor to obtain the correct remap result.
+    if actural_img_size != stereo_camera.img_size:
+        scalex = float(actural_img_size[0]) / stereo_camera.img_size[0]
+        scaley = float(actural_img_size[1]) / stereo_camera.img_size[1]
+        print "scaling factor: %s, %s" % (scalex, scaley)
+        
+        stereo_camera.camera_mat.left[0,0] *= scalex
+        stereo_camera.camera_mat.left[0,2] *= scalex
+        stereo_camera.camera_mat.left[1,1] *= scaley
+        stereo_camera.camera_mat.left[1,2] *= scaley
+
+        stereo_camera.camera_mat.right[0,0] *= scalex
+        stereo_camera.camera_mat.right[0,2] *= scalex
+        stereo_camera.camera_mat.right[1,1] *= scaley
+        stereo_camera.camera_mat.right[1,2] *= scaley
+    
+
     (r1, r2, p1, p2, Q, roi1, roi2) = cv2.stereoRectify(stereo_camera.camera_mat.left, 
-                                                              stereo_camera.distortion_coeffs.left, 
-                                                              stereo_camera.camera_mat.right, 
-                                                              stereo_camera.distortion_coeffs.right,
-                                                              img_size,
-                                                              stereo_camera.rotation_mat,
-                                                              stereo_camera.translation_vec,
-                                                              flags=0,
-                                                              alpha=0
-                                                              )
+                                                        stereo_camera.distortion_coeffs.left, 
+                                                        stereo_camera.camera_mat.right, 
+                                                        stereo_camera.distortion_coeffs.right,
+                                                        actural_img_size,
+                                                        stereo_camera.rotation_mat,
+                                                        stereo_camera.translation_vec,
+                                                        flags=0,
+                                                        alpha=0
+                                                        )
 
     (left_map1, left_map2) = cv2.initUndistortRectifyMap(stereo_camera.camera_mat.left, stereo_camera.distortion_coeffs.left,
-                                                                        r1, p1, img_size, cv2.CV_32FC1)
+                                                                        r1, p1, actural_img_size, cv2.CV_32FC1)
 
     (right_map1, right_map2) = cv2.initUndistortRectifyMap(stereo_camera.camera_mat.right, stereo_camera.distortion_coeffs.right,
-                                                                        r2, p2, img_size, cv2.CV_32FC1)
+                                                                        r2, p2, actural_img_size, cv2.CV_32FC1)
 
     return (left_map1, left_map2, right_map1, right_map2)
 
@@ -51,6 +70,7 @@ def undistort_rectify(stereo_camera, img1, img2):
         raise ValueError('left and right images size not matched')
     height, width = img1.shape
     img_size = (width, height)
+
 
     (left_map1, left_map2, right_map1, right_map2) = get_rectify_map(stereo_camera, img_size)
     img1_ = cv2.remap(img1, left_map1, left_map2, cv2.INTER_LINEAR)
@@ -95,8 +115,8 @@ def draw_horizontal_lines(img):
     return img
 
 if __name__ == "__main__":
-    cam = StereoCamera('calib_params.yml')
-    input_dir = 'checkerboards/'
+    cam = StereoCamera('calib_params2.yml')
+    input_dir = 'checkerboards2/'
     file_format = StereoPair("{idx:d}L.jpg", "{idx:d}R.jpg")
     img_num = 25
     test_rectification(cam, input_dir, file_format, img_num)
