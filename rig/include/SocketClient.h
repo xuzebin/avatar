@@ -14,6 +14,7 @@ namespace avt {
         void connect(const char* server = "localhost", int port = 5056);
 
         bool send2Maya(const TrackingDataf& data);
+        bool send2Maya(const std::vector<cv::Point2f> motion);
         bool send2Avatar(const TrackingDataf& data);
         bool send2Avatar(const cv::Mat& quaternion);
         bool sendRotMat2Avatar(const cv::Mat& rotationMatrix);

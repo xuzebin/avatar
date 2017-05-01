@@ -31,8 +31,14 @@ namespace avt {
     }
 
     inline std::string encodeMayaTranslation(const std::string& name, const avt::Point2f& p) {
-        float scale = 3.5;//1.4;
+        float scale = 3.5;
         return "setAttr " + name + ".translateX " + std::to_string(p.x * scale) + 
+            ";\n setAttr " + name + ".translateY " + std::to_string(-p.y * scale) + ";\n";
+    }
+
+    inline std::string encodeMayaTranslation(const std::string& name, const cv::Point2f& p) {
+        float scale = 3.5;
+        return "setAttr " + name + ".translateX " + std::to_string(-p.x * scale) + 
             ";\n setAttr " + name + ".translateY " + std::to_string(-p.y * scale) + ";\n";
     }
 
@@ -60,6 +66,37 @@ namespace avt {
 //         }
     
 //        cmd += "setKeyframe lob lib rib rob ln rn lm ul rm ll;\n";
+        frameCount++;
+        std::cout << cmd << std::endl;
+
+        try {
+            if (socket.send(cmd) < cmd.length()) {
+                std::cout << "full message not sent!" << std::endl;
+            }
+            return true;
+        } catch (int e) {
+            std::cout << "not connected!" << std::endl;
+            connect();
+            return false;
+        }
+        std::cout << "end" << std::endl;
+        return true;
+    }
+
+    bool SocketClient::send2Maya(const std::vector<cv::Point2f> motion) {
+        std::string cmd = "";
+        cmd += "currentTime " + std::to_string(frameCount) + ";\n";
+        cmd += encodeMayaTranslation("lob", motion[17]);
+        cmd += encodeMayaTranslation("lib", motion[21]);
+        cmd += encodeMayaTranslation("rib", motion[22]);
+        cmd += encodeMayaTranslation("rob", motion[26]);
+        cmd += encodeMayaTranslation("ln", motion[31]);
+        cmd += encodeMayaTranslation("rn", motion[35]);
+        cmd += encodeMayaTranslation("ul", motion[51]);
+        cmd += encodeMayaTranslation("lm", motion[48]);
+        cmd += encodeMayaTranslation("rm", motion[54]);
+        cmd += encodeMayaTranslation("ll", motion[57]);
+
         frameCount++;
         std::cout << cmd << std::endl;
 
