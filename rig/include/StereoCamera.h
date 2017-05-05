@@ -10,7 +10,7 @@ namespace avt {
     class StereoCamera {
 
     public:
-        StereoCamera(cv::Size sensorSize, cv::Size actualSize);
+        StereoCamera(cv::Size sensorSize, cv::Size realSize);
         ~StereoCamera();
 
         void undistortRectify(const cv::Mat& img1, const cv::Mat& img2, cv::Mat& imgOut1, cv::Mat& imgOut2);
@@ -73,7 +73,9 @@ namespace avt {
         // Hardcode the intrinsic and extrinsic parameters.
         // Note that the intrinsic matrices are calibrated from 640x480 image pairs.
         // If the image pair to be rectified have a different size than 640x480, it must multiply some of the items (fx, fy, cx, cy) in the intrinsic matrices by the scaling factor.
-        void init(cv::Size actualSize);
+        void init(cv::Size realSize);
+
+        void initRemap(cv::Size realSize);
 
         Camera* camera1;
         Camera* camera2;
@@ -81,16 +83,20 @@ namespace avt {
         double px;//pixel size in x (mm/px)
         cv::Size sensorSize;//mm
 
+        cv::Mat remap[2][2];
+
     public:
         cv::Mat R;
         cv::Mat T;
         cv::Mat E;
         cv::Mat F;
         cv::Size imageSize;
+        cv::Size realSize;
 
         cv::Mat R1, R2;
         cv::Mat P1, P2;
         cv::Mat Q;
+
 
     };
 

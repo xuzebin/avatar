@@ -6,13 +6,17 @@ namespace avt {
 
     using namespace std;
 
-    StereoCamera::StereoCamera(cv::Size sensorSize, cv::Size actualSize) {
+    StereoCamera::StereoCamera(cv::Size sensorSize, cv::Size realSize) {
         camera1 = new Camera();
         camera2 = new Camera();
 
         this->sensorSize = sensorSize;
-        this->px = (double)sensorSize.width / actualSize.width;
-        init(actualSize);
+        this->px = (double)sensorSize.width / realSize.width;
+        this->realSize = realSize;
+        
+        init(realSize);
+
+        initRemap(realSize);
     }
 
     StereoCamera::~StereoCamera() {
@@ -30,15 +34,18 @@ namespace avt {
         return os;
     }
 
+    void StereoCamera::initRemap(cv::Size realSize) {
+        //        cv::Mat remap[2][2];
+        getUndistortRectifyMap(realSize, remap);
+    }
+
     void StereoCamera::undistortRectify(const cv::Mat& img1, const cv::Mat& img2, cv::Mat& imgOut1, cv::Mat& imgOut2) {
         assert(img1.size() == img2.size());
-        cv::Size imgSize(img1.cols, img1.rows);
-        cv::Mat remap[2][2];
-        getUndistortRectifyMap(imgSize, remap);
-            
+//         cv::Size imgSize(img1.cols, img1.rows);
+//         cv::Mat remap[2][2];
+        //        getUndistortRectifyMap(imgSize, remap);
         cv::remap(img1, imgOut1, remap[0][0], remap[0][1], INTER_LINEAR);
         cv::remap(img2, imgOut2, remap[1][0], remap[1][1], INTER_LINEAR);
-
     }
 
     void StereoCamera::getUndistortRectifyMap(const cv::Size& imgSize, cv::Mat remap[2][2]) {

@@ -6,6 +6,7 @@
 
 namespace avt {
     class BlockMatching {
+    public:
         BlockMatching();
         ~BlockMatching();
         void findStereoCorrespondence(cv::Mat& img1, cv::Mat& img2, const std::vector<cv::Point2f>& p1s, std::vector<cv::Point2f>& p2s, int blockSize, int minDisparity, int maxDisparity);

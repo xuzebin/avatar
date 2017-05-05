@@ -1,5 +1,4 @@
-#define FUCK
-#ifdef FUCK
+#ifdef STEREO_FACE
 #include <dlib/opencv.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
@@ -24,6 +23,7 @@ void overlayFps(double t, cv::Mat& img);
 void overlayHorizontalLines(cv::Mat& img);
 bool showLines = false;
 bool showFps = false;
+bool startTracking = false;
 
 int main(int argc, char** argv) {
     try {
@@ -87,8 +87,13 @@ int main(int argc, char** argv) {
             cv::Mat face = temp.clone();
             cv::Mat face2 = temp2.clone();
 
-            bool tracked = tracker.track(temp);
-            bool tracked2 = tracker2.track(temp2);
+            bool tracked = false, tracked2 = false;
+            if (startTracking) {
+                tracker.reset();
+                tracker2.reset();
+                tracked = tracker.track(temp);
+                tracked2 = tracker2.track(temp2);
+            }
             if (tracked || tracked2) {
                 const avt::TrackingData& data = tracker.get_face_landmarks();
                 const avt::TrackingData& data2 = tracker2.get_face_landmarks();
@@ -143,6 +148,8 @@ int main(int argc, char** argv) {
                 showLines = !showLines;
             } else if (key == 'f') {
                 showFps = !showFps;
+            } else if (key == 't') {
+                startTracking = !startTracking;
             }
         }
     } catch(serialization_error& e) {
@@ -190,4 +197,5 @@ void overlayFps(double t, cv::Mat& face) {
             0.5, // size
             cv::Scalar(0, 0, 255));       // color
 }
+
 #endif

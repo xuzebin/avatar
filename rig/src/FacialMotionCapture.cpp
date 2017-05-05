@@ -1,4 +1,4 @@
-//#define FACIAL_MOTION
+#define FACIAL_MOTION
 #ifdef FACIAL_MOTION
 #include <dlib/opencv.h>
 #include <opencv2/highgui/highgui.hpp>
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-        cv::VideoCapture cap1(1);
+        cv::VideoCapture cap1(0);
         if (!cap1.isOpened()) {
             cerr << "Unable to connect to camera1" << endl;
             return 1;
@@ -46,7 +46,9 @@ int main(int argc, char** argv) {
         int height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
 
         std::cout << width << "x" << height << std::endl;
-        cv::Size size(320, 240);
+//         cv::Size size(320, 240);
+//        cv::Size size(640, 480);
+        cv::Size size(640, 360);
         std::cout << "resized to: " << size << std::endl;
 
         std::string pose_model_file = (argc == 2 ? argv[1] : "../data/shape_predictor_68_face_landmarks.dat");
@@ -75,14 +77,12 @@ int main(int argc, char** argv) {
             //            tracker.reset();
             tracked = tracker.track(tmp, face);
             if (tracked) {
-                const std::vector<cv::Point2f> p1 = tracker.getFaceLandMarks();
-                const std::vector<cv::Point2f> motion = tracker.getMotionTrackPts();
+                const std::vector<cv::Point2f>& p1 = tracker.getFaceLandMarks();
+                const std::vector<cv::Point2f>& motion = tracker.getMotionTrackPts();
                 
-//                 for (int i = 0; i < d.num_parts(); ++i) {
-//                     cv::circle(face, cv::Point(d.part(i).x(), d.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
-//                     cv::circle(face2, cv::Point(d2.part(i).x(), d2.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
-//                 }
-
+                for (int i = 0; i < p1.size(); ++i) {
+                     cv::circle(face, p1[i], 2, cv::Scalar(255, 0, 255), -1);
+                }
 
                 // Estimate pose
                 cv::Mat rvec(3,1,cv::DataType<double>::type);
@@ -96,14 +96,22 @@ int main(int argc, char** argv) {
                 tvec.at<double>(0, 0) = 0; tvec.at<double>(1, 0) = 0; tvec.at<double>(2, 0) = 1;
                 
                 cv::Mat distCoeffs(4,1,cv::DataType<double>::type);
-                distCoeffs.at<double>(0) = -0.41979;
-                distCoeffs.at<double>(1) = 0.206977;
+                distCoeffs.at<double>(0) = 0;//-0.41979;
+                distCoeffs.at<double>(1) = 0;// 0.206977;
                 distCoeffs.at<double>(2) = 0;
                 distCoeffs.at<double>(3) = 0;
+
+                // Estimate camera's intrinsic matrix
+                double focalLength = size.width;
+                cv::Point2d center(size.width / 2, size.height / 2);
                 cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 
-                                 564.0351649907346, 0.0, 343.3765330243276,
-                                 0.0, 564.0351649907346, 201.3194373417247,
-                                 0.0, 0.0, 1.0);
+                                        focalLength, 0.0, center.x,
+                                        0.0, focalLength, center.y,
+                                        0.0, 0.0, 1.0);
+//                 cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 
+//                                  564.0351649907346, 0.0, 343.3765330243276,
+//                                  0.0, 564.0351649907346, 201.3194373417247,
+//                                  0.0, 0.0, 1.0);
                 cv::Mat cameraMat33 = cameraMatrix(cv::Rect(0, 0, 3, 3));
 
                 std::vector<cv::Point3f> modelPoints(6);
@@ -172,7 +180,7 @@ int main(int argc, char** argv) {
                 cv::line(face, p1[33], image_axes[1], cv::Scalar(0, 255, 0), 2);
                 cv::line(face, p1[33], image_axes[2], cv::Scalar(255, 0, 0), 2);
 
-                // Send data to server
+                //                Send data to server
                 if (startSending) {
                     //                    socketClient.sendModelMatrix2Avatar(projectionMat);
                     socketClient.send2Maya(motion);
@@ -209,6 +217,7 @@ int main(int argc, char** argv) {
             } else if (key == 's') {
                 startSending = !startSending;
             }
+
         }
     } catch(serialization_error& e) {
         cout << "You need dlib's default face landmarking model file to run this example." << endl;

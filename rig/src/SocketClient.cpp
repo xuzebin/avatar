@@ -36,7 +36,12 @@ namespace avt {
             ";\n setAttr " + name + ".translateY " + std::to_string(-p.y * scale) + ";\n";
     }
 
-    inline std::string encodeMayaTranslation(const std::string& name, const cv::Point2f& p) {
+    inline std::string encodeMayaTranslation(const std::string& name, const cv::Point2f& pp) {
+        cv::Point2f p(pp);
+        double precision = 0.01;  // i.e. round to nearest one-hundreth
+        p.x = floor(p.x / precision + 0.5) * precision;
+        p.y = floor(p.y / precision + 0.5) * precision;
+
         float scale = 3.5;
         return "setAttr " + name + ".translateX " + std::to_string(-p.x * scale) + 
             ";\n setAttr " + name + ".translateY " + std::to_string(-p.y * scale) + ";\n";
@@ -48,8 +53,7 @@ namespace avt {
 
     bool SocketClient::send2Maya(const TrackingDataf& data) {
         std::string cmd = "";
-        cmd += "currentTime " + std::to_string(frameCount) + ";\n";
-
+        cmd += "currentTime (`currentTime -query` + 1);\n";
         cmd += encodeMayaTranslation("lob", data.markers[17]);
         cmd += encodeMayaTranslation("lib", data.markers[21]);
         cmd += encodeMayaTranslation("rib", data.markers[22]);
@@ -60,12 +64,8 @@ namespace avt {
         cmd += encodeMayaTranslation("lm", data.markers[48]);
         cmd += encodeMayaTranslation("rm", data.markers[54]);
         cmd += encodeMayaTranslation("ll", data.markers[57]);
+        cmd += "setKeyframe lob lib rib rob ln rn lm ul rm ll;\n";
 
-//         if (data.rotation.x < 45 && data.rotation.x > -45 && data.rotation.y > -90 && data.rotation.y < 90 && data.rotation.z > -45 && data.rotation.z < 45) {
-//             cmd += encodePose(data.rotation);
-//         }
-    
-//        cmd += "setKeyframe lob lib rib rob ln rn lm ul rm ll;\n";
         frameCount++;
         std::cout << cmd << std::endl;
 
@@ -85,7 +85,7 @@ namespace avt {
 
     bool SocketClient::send2Maya(const std::vector<cv::Point2f> motion) {
         std::string cmd = "";
-        cmd += "currentTime " + std::to_string(frameCount) + ";\n";
+        cmd += "currentTime (`currentTime -query` + 1);\n";
         cmd += encodeMayaTranslation("lob", motion[17]);
         cmd += encodeMayaTranslation("lib", motion[21]);
         cmd += encodeMayaTranslation("rib", motion[22]);
@@ -96,6 +96,7 @@ namespace avt {
         cmd += encodeMayaTranslation("lm", motion[48]);
         cmd += encodeMayaTranslation("rm", motion[54]);
         cmd += encodeMayaTranslation("ll", motion[57]);
+        cmd += "setKeyframe lob lib rib rob ln rn lm ul rm ll;\n";
 
         frameCount++;
         std::cout << cmd << std::endl;
@@ -174,7 +175,7 @@ namespace avt {
             cmd += std::to_string(points[i].x) + " " + std::to_string(points[i].y) + " " + std::to_string(points[i].z) + " ";
         }
         frameCount++;
-        std::cout << cmd << std::endl;
+        //        std::cout << cmd << std::endl;
         try {
             int n = socket.send(cmd);
             std::cout << n << "bytes sent" << std::endl;
