@@ -1,9 +1,6 @@
 /**
- * Capture facial motion by detecting and tracking facial landmarks, and send motion data to Maya server.
+ * Capture facial motion by detecting and tracking facial landmarks using single camera, and send motion data to Maya server.
  */
-
-#define FACIAL_MOTION
-#ifdef FACIAL_MOTION
 
 #include <dlib/opencv.h>
 #include <opencv2/highgui/highgui.hpp>
@@ -34,7 +31,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         
-        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "../../data/shape_predictor_68_face_landmarks.dat");
+        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "../../../data/shape_predictor_68_face_landmarks.dat");
         avt::FaceTrackerOf tracker(poseModelFile);
 
         const char* host = (argc == 4 ? argv[2] : "localhost");
@@ -118,6 +115,3 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-
-
-#endif
