@@ -1,5 +1,7 @@
-#define FACIAL_MOTION
-#ifdef FACIAL_MOTION
+/**
+ * Estimate head pose using single camera, and send pose (extrinsic matrix) to the avatar server.
+ */
+
 #include <dlib/opencv.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
@@ -14,27 +16,30 @@
 #include "SocketClient.h"
 #include "FaceTracker.h"
 #include "FaceTrackerOf.h"
-#include "PoseEstimator.h"
-#include "StereoCamera.h"
+#include "Utils.h"
 
 using namespace dlib;
 using namespace std;
 
-void overlayFps(double t, cv::Mat& img);
-void overlayHorizontalLines(cv::Mat& img);
-bool showLines = false;
 bool showFps = false;
 bool startTracking = true;
 bool startSending = false;
-void rotationMatrixToEulerAngles(const cv::Mat &R, float&x, float& y, float& z);
 
 int main(int argc, char** argv) {
     try {
-        if (argc > 2) {
+        if (argc >= 5 || argc == 3) {
             cout << "Usage:" << endl;
-            cout << "./avatar data/shape_predictor_68_face_landmarks.dat" << endl;
+            cout << "./avatar data/shape_predictor_68_face_landmarks.dat localhost 5055" << endl;
             return 0;
         }
+        
+        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "../../../data/shape_predictor_68_face_landmarks.dat");
+        avt::FaceTrackerOf tracker(poseModelFile);
+
+        const char* host = (argc == 4 ? argv[2] : "localhost");
+        int portNum = (argc == 4 ? std::stoi(argv[3]) : 5055);
+        avt::SocketClient socketClient;
+        socketClient.connect(host, portNum);
 
         cv::VideoCapture cap1(0);
         if (!cap1.isOpened()) {
@@ -42,22 +47,14 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        cv::namedWindow("HeadPose", cv::WINDOW_OPENGL);
+
         int width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
         int height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
 
         std::cout << width << "x" << height << std::endl;
-//         cv::Size size(320, 240);
-//        cv::Size size(640, 480);
         cv::Size size(640, 360);
         std::cout << "resized to: " << size << std::endl;
-
-        std::string pose_model_file = (argc == 2 ? argv[1] : "../data/shape_predictor_68_face_landmarks.dat");
-
-        avt::SocketClient socketClient;
-        socketClient.connect("localhost", 5056);
-        avt::FaceTrackerOf tracker(pose_model_file);
-        avt::StereoCamera stereoCamera(cv::Size(32, 32), size);
-        std::cout << stereoCamera << std::endl;
 
         double startTime = 0.0;
         // Grab and process frames until the main window is closed by the user.
@@ -73,16 +70,18 @@ int main(int argc, char** argv) {
             cv::resize(raw, tmp, size);
 
             cv::Mat face = tmp.clone();
+
             bool tracked = false;
-            //            tracker.reset();
-            tracked = tracker.track(tmp, face);
+            if (startTracking) {
+                tracker.reset();
+                tracked = tracker.track(tmp, face);
+            }
             if (tracked) {
-                const std::vector<cv::Point2f>& p1 = tracker.getFaceLandMarks();
-                const std::vector<cv::Point2f>& motion = tracker.getMotionTrackPts();
-                
-                for (int i = 0; i < p1.size(); ++i) {
-                     cv::circle(face, p1[i], 2, cv::Scalar(255, 0, 255), -1);
-                }
+                const std::vector<cv::Point2f> p1 = tracker.getFaceLandMarks();
+//                 for (int i = 0; i < d.num_parts(); ++i) {
+//                     cv::circle(face, cv::Point(d.part(i).x(), d.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
+//                 }
+
 
                 // Estimate pose
                 cv::Mat rvec(3,1,cv::DataType<double>::type);
@@ -97,7 +96,7 @@ int main(int argc, char** argv) {
                 
                 cv::Mat distCoeffs(4,1,cv::DataType<double>::type);
                 distCoeffs.at<double>(0) = 0;//-0.41979;
-                distCoeffs.at<double>(1) = 0;// 0.206977;
+                distCoeffs.at<double>(1) = 0;//0.206977;
                 distCoeffs.at<double>(2) = 0;
                 distCoeffs.at<double>(3) = 0;
 
@@ -108,11 +107,6 @@ int main(int argc, char** argv) {
                                         focalLength, 0.0, center.x,
                                         0.0, focalLength, center.y,
                                         0.0, 0.0, 1.0);
-//                 cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 
-//                                  564.0351649907346, 0.0, 343.3765330243276,
-//                                  0.0, 564.0351649907346, 201.3194373417247,
-//                                  0.0, 0.0, 1.0);
-                cv::Mat cameraMat33 = cameraMatrix(cv::Rect(0, 0, 3, 3));
 
                 std::vector<cv::Point3f> modelPoints(6);
                 modelPoints[0] = cv::Point3f(0, 0, 0);//nose
@@ -130,7 +124,7 @@ int main(int argc, char** argv) {
                 }
                 cv::solvePnP(modelPoints,
                              subLandmarks1,
-                             cameraMat33,
+                             cameraMatrix,
                              distCoeffs,
                              rvec, tvec, true, CV_ITERATIVE);//CV_EPNP);CV_ITERATIVE);
 
@@ -142,62 +136,56 @@ int main(int argc, char** argv) {
 //                                    rvec, tvec, false, 100, 8.0, 0.95, inliers, CV_EPNP);//CV_ITERATIVE);
 
                 //                std::cout << "rotation: " << rvec << std::endl;
-                //                std::cout << "translation: " << tvec << std::endl;
+                std::cout << "translation: " << tvec << std::endl;
 
 
                 // Convert rotation vector to rotation matrix
                 cv::Mat rotMat(3,3,cv::DataType<double>::type);
                 cv::Rodrigues(rvec, rotMat);
-                //                std::cout << "rotation matrix: " << rotMat << std::endl;
-                
+                std::cout << "rotation matrix: " << rotMat << std::endl;
                 cv::Mat projectionMat = (cv::Mat_<double>(4, 4) << 
                                          rotMat.at<double>(0, 0), rotMat.at<double>(0, 1), rotMat.at<double>(0, 2), tvec.at<double>(0, 0),
                                          rotMat.at<double>(1, 0), rotMat.at<double>(1, 1), rotMat.at<double>(1, 2), tvec.at<double>(1, 0),
                                          rotMat.at<double>(2, 0), rotMat.at<double>(2, 1), rotMat.at<double>(2, 2), tvec.at<double>(2, 0),
                                          0, 0, 0, 1);
-                
 
                 float x, y, z;
                 rotationMatrixToEulerAngles(rotMat, x, y, z);
 
                 // Project 3d points back to image points
                 std::vector<cv::Point2f> projectedPoints;
-                cv::projectPoints(modelPoints, rvec, tvec, cameraMat33, distCoeffs, projectedPoints);
+                cv::projectPoints(modelPoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPoints);
                 //Draw projected corners
                 for(int i = 0; i < projectedPoints.size(); ++i) {
                     cv::circle(face, projectedPoints[i], 2, cv::Scalar(0, 255, 255), -1);
                 }
 
                 // Draw X,Y,Z axes
-                std::vector<cv::Point3f> axis;
                 std::vector<cv::Point2f> image_axes;
-                axis.push_back(cv::Point3f(10, 0, 0));
-                axis.push_back(cv::Point3f(0, 10, 0));
-                axis.push_back(cv::Point3f(0, 0, -10));
-                cv::projectPoints(axis, rvec, tvec, cameraMat33, distCoeffs, image_axes);
+                static std::vector<cv::Point3f> axes = {cv::Point3f(10, 0, 0),
+                                                        cv::Point3f(0, 10, 0), 
+                                                        cv::Point3f(0, 0, -10)};
 
-                cv::line(face, p1[33], image_axes[0], cv::Scalar(0, 0, 255), 2);
-                cv::line(face, p1[33], image_axes[1], cv::Scalar(0, 255, 0), 2);
-                cv::line(face, p1[33], image_axes[2], cv::Scalar(255, 0, 0), 2);
+                cv::projectPoints(axes, rvec, tvec, cameraMatrix, distCoeffs, image_axes);
 
-                //                Send data to server
+                cv::arrowedLine(face, p1[33], image_axes[0], cv::Scalar(0, 0, 255), 2);
+                cv::arrowedLine(face, p1[33], image_axes[1], cv::Scalar(0, 255, 0), 2);
+                cv::arrowedLine(face, p1[33], image_axes[2], cv::Scalar(255, 0, 0), 2);
+                
+                // Send data to server
                 if (startSending) {
-                    //                    socketClient.sendModelMatrix2Avatar(projectionMat);
-                    socketClient.send2Maya(motion);
+                    socketClient.sendModelMatrix2Avatar(projectionMat);
                 }
 
-            }
-
-            if (showLines) {
-                overlayHorizontalLines(face);
-            }
-            if (showFps) {
-                overlayFps(startTime, face);
             }
 
             // Flip
             cv::Mat temp;
             cv::flip(face, temp, 1);
+
+            if (showFps) {
+                overlayFps(startTime, temp);
+            }
 
             cv::imshow("HeadPose", temp);
 
@@ -208,8 +196,6 @@ int main(int argc, char** argv) {
                 break;
             } else if (key == 'r') {
                 tracker.reset();
-            } else if (key == 'h') {
-                showLines = !showLines;
             } else if (key == 'f') {
                 showFps = !showFps;
             } else if (key == 't') {
@@ -217,7 +203,6 @@ int main(int argc, char** argv) {
             } else if (key == 's') {
                 startSending = !startSending;
             }
-
         }
     } catch(serialization_error& e) {
         cout << "You need dlib's default face landmarking model file to run this example." << endl;
@@ -233,72 +218,3 @@ int main(int argc, char** argv) {
 }
 
 
-void overlayHorizontalLines(cv::Mat& img) {
-    static const int LINES_NUM = 10;
-    int interval = img.rows / LINES_NUM;
-    int col = img.cols;
-    for (int i = 1; i <= LINES_NUM; i++) {
-        cv::Point p1(0, i * interval);
-        cv::Point p2(col, i * interval);
-        cv::Scalar color(0, 255, 0);
-        cv::line(img, p1, p2, color, 1);
-    }
-}
-void overlayFps(double t, cv::Mat& face) {  
-    //Calculate fps
-    double fps;
-    char string[10];
-    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-    fps = 1.0 / t;
-
-    //Save it in a string
-    sprintf(string, "%.2f", fps);      
-    std::string fpsString("FPS:");
-    fpsString += string; 
-                  
-    //output
-    putText(face, // matrix
-            fpsString,                  // string
-            cv::Point(5, 20),           // coordinate
-            cv::FONT_HERSHEY_SIMPLEX,   // font
-            0.5, // size
-            cv::Scalar(0, 0, 255));       // color
-}
-
-
-// Checks if a matrix is a valid rotation matrix.
-bool isRotationMatrix(const cv::Mat &R) {
-    cv::Mat Rt;
-    transpose(R, Rt);
-    cv::Mat shouldBeIdentity = Rt * R;
-    cv::Mat I = cv::Mat::eye(3,3, shouldBeIdentity.type());
-     
-    return  norm(I, shouldBeIdentity) < 1e-6;
-}
- 
-// Calculates rotation matrix to euler angles
-// The result is the same as MATLAB except the order
-// of the euler angles ( x and z are swapped ).
-void rotationMatrixToEulerAngles(const cv::Mat &R, float&x, float& y, float& z) {
-    assert(isRotationMatrix(R));
-     
-    float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0));
- 
-    bool singular = sy < 1e-6;
- 
-    //    float x, y, z;
-    if (!singular) {
-        x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = atan2(R.at<double>(1,0), R.at<double>(0,0));
-    } else {
-        x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-        y = atan2(-R.at<double>(2,0), sy);
-        z = 0;
-    }
-    x = x * 180.0 / 3.1415926;
-    y = y * 180.0 / 3.1415926;
-    z = z * 180.0 / 3.1415926;
-    std::cout << "euler angle: " << x << "," << y << "," << z << std::endl;
-}
-#endif
