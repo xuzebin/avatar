@@ -21,7 +21,7 @@
 using namespace dlib;
 using namespace std;
 
-bool showFps = false;
+bool showFps = true;
 bool startTracking = true;
 bool startSending = false;
 

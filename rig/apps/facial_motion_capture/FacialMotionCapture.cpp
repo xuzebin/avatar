@@ -20,7 +20,7 @@
 using namespace dlib;
 using namespace std;
 
-bool showFps = false;
+bool showFps = true;
 bool startSending = false;
 
 int main(int argc, char** argv) {
