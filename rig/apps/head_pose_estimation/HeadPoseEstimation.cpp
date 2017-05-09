@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        cv::namedWindow("HeadPose", cv::WINDOW_OPENGL);
+//         cv::namedWindow("HeadPose", cv::WINDOW_OPENGL);
 
         int width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
         int height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
