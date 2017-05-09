@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
 
             cv::Mat face = tmp.clone();
             bool tracked = false;
+            tracker.reset();
             tracked = tracker.track(tmp, face);
             if (tracked) {
                 const std::vector<cv::Point2f>& p1 = tracker.getFaceLandMarks();
