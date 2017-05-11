@@ -47,12 +47,18 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-//         cv::namedWindow("HeadPose", cv::WINDOW_OPENGL);
+        int width, height;
+        if (CV_MAJOR_VERSION == 3) {
+            width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
+            height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
+            std::cout << width << "x" << height << std::endl;
+        } else if (CV_MAJOR_VERSION == 2) {
+            width = cap1.get(CV_CAP_PROP_FRAME_WIDTH);
+            height = cap1.get(CV_CAP_PROP_FRAME_HEIGHT);
+            std::cout << width << "x" << height << std::endl;
+        }
 
-        int width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
-        int height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
 
-        std::cout << width << "x" << height << std::endl;
         cv::Size size(640, 360);
         std::cout << "resized to: " << size << std::endl;
 
@@ -61,7 +67,7 @@ int main(int argc, char** argv) {
         while(true) {
             startTime = (double)cv::getTickCount();
 
-            // Grab and decode left right frames
+            // Grab and decode the frame
             cv::Mat raw;
             cap1.grab();
             cap1.retrieve(raw);
@@ -78,10 +84,6 @@ int main(int argc, char** argv) {
             }
             if (tracked) {
                 const std::vector<cv::Point2f> p1 = tracker.getFaceLandMarks();
-//                 for (int i = 0; i < d.num_parts(); ++i) {
-//                     cv::circle(face, cv::Point(d.part(i).x(), d.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
-//                 }
-
 
                 // Estimate pose
                 cv::Mat rvec(3,1,cv::DataType<double>::type);
@@ -127,17 +129,8 @@ int main(int argc, char** argv) {
                              cameraMatrix,
                              distCoeffs,
                              rvec, tvec, true, CV_ITERATIVE);//CV_EPNP);CV_ITERATIVE);
-
-//                 cv::Mat inliers;
-//                 cv::solvePnPRansac(modelPoints,
-//                                    subLandmarks1,
-//                                    cameraMat33,
-//                                    distCoeffs,
-//                                    rvec, tvec, false, 100, 8.0, 0.95, inliers, CV_EPNP);//CV_ITERATIVE);
-
                 //                std::cout << "rotation: " << rvec << std::endl;
                 std::cout << "translation: " << tvec << std::endl;
-
 
                 // Convert rotation vector to rotation matrix
                 cv::Mat rotMat(3,3,cv::DataType<double>::type);

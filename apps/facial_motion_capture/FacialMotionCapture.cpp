@@ -45,10 +45,17 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        int width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
-        int height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
+        int width, height;
+        if (CV_MAJOR_VERSION == 3) {
+            width = cap1.get(cv::CAP_PROP_FRAME_WIDTH);
+            height = cap1.get(cv::CAP_PROP_FRAME_HEIGHT);
+            std::cout << width << "x" << height << std::endl;
+        } else if (CV_MAJOR_VERSION == 2) {
+            width = cap1.get(CV_CAP_PROP_FRAME_WIDTH);
+            height = cap1.get(CV_CAP_PROP_FRAME_HEIGHT);
+            std::cout << width << "x" << height << std::endl;
+        }
 
-        std::cout << width << "x" << height << std::endl;
         cv::Size size(640, 360);
         std::cout << "resized to: " << size << std::endl;
 
@@ -57,7 +64,7 @@ int main(int argc, char** argv) {
         while(true) {
             startTime = (double)cv::getTickCount();
 
-            // Grab and decode left right frames
+            // Grab and decode the frame
             cv::Mat raw;
             cap1.grab();
             cap1.retrieve(raw);
