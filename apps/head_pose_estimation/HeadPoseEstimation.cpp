@@ -1,5 +1,9 @@
 /**
- * Estimate head pose using single camera, and send pose (extrinsic matrix) to the avatar server.
+ * Estimate head pose using a single camera, and send pose (extrinsic matrix) data to the avatar server.
+ *
+ * Usage:
+ * ./avatar shape_predictor_68_face_landmarks.dat localhost 5055
+ *
  */
 
 #include <dlib/opencv.h>
@@ -52,6 +56,7 @@ int main(int argc, char** argv) {
         avt::SocketClient socketClient;
         socketClient.connect(host, portNum);
 
+        // By default, capture vidoe data from device 0 (laptop's default camera).
         cv::VideoCapture cap1(0);
         if (!cap1.isOpened()) {
             cerr << "Unable to connect to camera1" << endl;

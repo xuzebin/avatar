@@ -7,7 +7,6 @@ find_package(OpenCV REQUIRED)
 SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
 
 include(../libs/dlib/cmake)
-
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB CLIENT_SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)

@@ -2,6 +2,8 @@
 #define BLOCKINGQUEUE_H
 #include <vector>
 #include <queue>
+#include "base/cvec.h"
+#include <mutex>
 
 class BlockingQueue {
  public:
