@@ -4,6 +4,9 @@
  * Usage:
  * ./avatar shape_predictor_68_face_landmarks.dat localhost 5055
  *
+ * Press f to show/hide fps
+ * Press t to start tracking the face
+ * Press s to start sending data to server.
  */
 
 #include <dlib/opencv.h>
@@ -40,15 +43,23 @@ void constructWorldPoints(std::vector<cv::Point3f>& modelPoints) {
     modelPoints.push_back(cv::Point3f(2.5, 3.5, 3));//right corner of mouth
 }
 
+void printPrompt() {
+    std::cout << "Press f to show/hide fps" << std::endl;
+    std::cout << "Press t to start tracking the face" << std::endl;
+    std::cout << "Press s to start sending data to server" << std::endl;
+}
+
 int main(int argc, char** argv) {
     try {
         if (argc >= 5 || argc == 3) {
             cout << "Usage:" << endl;
-            cout << "./avatar data/shape_predictor_68_face_landmarks.dat localhost 5055" << endl;
+            cout << "./avatar shape_predictor_68_face_landmarks.dat localhost 5055" << endl;
             return 0;
         }
+
+        printPrompt();
         
-        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "../../../data/shape_predictor_68_face_landmarks.dat");
+        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "shape_predictor_68_face_landmarks.dat");
         avt::FaceTrackerOf tracker(poseModelFile);
 
         const char* host = (argc == 4 ? argv[2] : "localhost");
@@ -148,6 +159,7 @@ int main(int argc, char** argv) {
                 }
 
                 // Must be reset to an initial guess for solvePnP to work properly.
+                Rodrigues(cv::Mat(3, 3, CV_64FC1, GLCoord), rvec);
                 tvec.at<double>(0, 0) = 0;
                 tvec.at<double>(1, 0) = 0;
                 tvec.at<double>(2, 0) = 1;
@@ -182,8 +194,6 @@ int main(int argc, char** argv) {
                 for(int i = 0; i < projectedPoints.size(); ++i) {
                     cv::circle(face, projectedPoints[i], 2, cv::Scalar(0, 255, 255), -1);
                 }
-
-
 
                 // Draw X,Y,Z axes that are reprojected back to the imaegs
                 cv::projectPoints(world_axes, rvec, tvec, cameraMatrix, distCoeffs, image_axes);

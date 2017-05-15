@@ -1,5 +1,5 @@
-# Face Landmark Detection
-Face landmark detection example using dlib.
+# Facial Landmark Detection
+Facial landmark detection example using dlib.
 
 ## Dependencies
 * OpenCV (>=2.4.3)
@@ -21,4 +21,4 @@ make -j8
 ```
 
 ## Face Landmarks positions
-![](../../res/face_landmark.jpg)
+![](face_landmark.jpg)

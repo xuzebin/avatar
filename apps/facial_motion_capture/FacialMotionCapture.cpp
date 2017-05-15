@@ -27,11 +27,11 @@ int main(int argc, char** argv) {
     try {
         if (argc >= 5 || argc == 3) {
             cout << "Usage:" << endl;
-            cout << "./avatar data/shape_predictor_68_face_landmarks.dat localhost 5056" << endl;
+            cout << "./avatar shape_predictor_68_face_landmarks.dat localhost 5056" << endl;
             return 0;
         }
         
-        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "../../../data/shape_predictor_68_face_landmarks.dat");
+        std::string poseModelFile = ((argc == 2 || argc == 4) ? argv[1] : "shape_predictor_68_face_landmarks.dat");
         avt::FaceTrackerOf tracker(poseModelFile);
 
         const char* host = (argc == 4 ? argv[2] : "localhost");

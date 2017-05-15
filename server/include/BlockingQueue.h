@@ -5,62 +5,26 @@
 #include "base/cvec.h"
 #include <mutex>
 
-class BlockingQueue {
- public:
-    BlockingQueue(int maxSize = 20) : MAX_SIZE(maxSize) {
-    }
+namespace avt {
 
-    ~BlockingQueue() {
-    }
+    class BlockingQueue {
 
-    void send(std::vector<Cvec3f>& points) {
-        std::unique_lock<std::mutex> locker(mu);
-        cond.wait(locker, [this](){return !isFull();});
+    public:
+        BlockingQueue(int maxSize = 20);
+        ~BlockingQueue();
 
-#ifdef DEBUG
-        std::cout << "producing"  << std::endl;
-#endif
+        void send(std::vector<Cvec3f>& points);
+        const std::vector<Cvec3f>& consume();
 
-        std::vector<Cvec3f> copy(points);
-        buffer.push(copy);
+    private:
 
-        locker.unlock();
-        cond.notify_all();
-    }
-    const std::vector<Cvec3f>& consume() {
-        std::unique_lock<std::mutex> locker(mu);
-        cond.wait(locker, [this](){return !isEmpty();});
-        const std::vector<Cvec3f>& front = buffer.front();
+        bool isFull()  const { return buffer.size() >= MAX_SIZE;}
+        bool isEmpty() const { return buffer.size() == 0; }
 
-#ifdef DEBUG
-        for (int i = 0; i < front.size(); ++i) {
-            std::cout << "consume " << front[i][0];
-            std::cout << ", " << front[i][1];
-            std::cout << ", " << front[i][2] << std::endl;
-        }
-#endif
-
-        buffer.pop();
-        locker.unlock();
-        cond.notify_all();
-        return front;
-    }
-
- private:
-
-    bool isFull() const {
-        return buffer.size() >= MAX_SIZE;
-    }
-
-    bool isEmpty() const {
-        return buffer.size() == 0;
-    }
-
-    std::mutex mu;
-    std::condition_variable cond;
-
-    std::queue<std::vector<Cvec3f>> buffer;
-    const int MAX_SIZE;
-};
-
+        std::mutex mu;
+        std::condition_variable cond;
+        std::queue<std::vector<Cvec3f>> buffer;
+        const int MAX_SIZE;
+    };
+}
 #endif /* BLOCKINGQUEUE_H */

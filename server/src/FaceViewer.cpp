@@ -1,7 +1,8 @@
 /**
  * A viewer for a face model. The face model will change its rotation/translation given the pose data sent fromt the client.
- * Usage:
- * ./FaceViewer 5055(a port number)
+ *
+ * Usage: ./FaceViewer [obj file] [shaders directory] [port number]
+ * Examples: ./FaceViewer face.obj shaders 5055
  * Press q to quit.
  */
 #include <GLUT/glut.h>
@@ -60,7 +61,7 @@ void display(void) {
     Scene::render();
 }
 
-void init(void) {
+void init(std::string modelFile, std::string shadersDir) {
     glClearColor(0.7, 0.7, 0.7, 1.0);
     glClearDepth(0.0);
     glCullFace(GL_BACK);
@@ -69,8 +70,8 @@ void init(void) {
     glDepthFunc(GL_GREATER);
     glReadBuffer(GL_BACK);
     
-    std::string vertexShader = "shaders/vertex_shader_simple.glsl";
-    std::string fragmentShader = "shaders/fragment_shader_color.glsl";
+    std::string vertexShader = shadersDir + "/vertex_shader_simple.glsl";
+    std::string fragmentShader = shadersDir + "/fragment_shader_color.glsl";
 
     auto colorShader = std::make_shared<ColorShader>();
     colorShader->createProgram(vertexShader.c_str(), fragmentShader.c_str());
@@ -84,7 +85,7 @@ void init(void) {
 
     Scene::setLight0(light0);
     
-    auto model0 = std::make_shared<Model>("assets/models/face/face.obj", "model0", "assets/models/face/");
+    auto model0 = std::make_shared<Model>(modelFile, "model0");
     model0->material->setColor(0.8, 0.8, 0.8);
     model0->translate(Cvec3(0, 0, -4));
     model0->setShader(colorShader);
@@ -177,12 +178,19 @@ void motion(int x, int y) {
 }
 
 int main(int argc, char **argv) {
-    if (argc > 2) {
-        std::cout << "Usage: ./FaceViewer 5055(a port number)" << std::endl;
+    if (argc != 1 && argc != 4) {
+        std::cout << "Usage: ./FaceViewer [obj file] [shaders directory] [port number]" << std::endl;
+        std::cout << "Examples: ./FaceViewer face.obj shaders 5055" << std::endl;
         return 1;
     }
 
-    int portNumber = (argc == 2) ? std::stoi(argv[1]) : 5055;
+    std::string modelFile = "face.obj";
+    std::string shadersDirectory = "shaders";
+    if (argc == 4) {
+        modelFile = argv[1];
+        shadersDirectory = argv[2];
+    }
+    int portNumber = (argc == 4) ? std::stoi(argv[3]) : 5055;
 
     std::cout << "Press q to quit" << std::endl;
     
@@ -202,7 +210,7 @@ int main(int argc, char **argv) {
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
 
-    init();
+    init(modelFile, shadersDirectory);
     glutMainLoop();
 
     t.join();

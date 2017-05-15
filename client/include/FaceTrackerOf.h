@@ -63,7 +63,6 @@ namespace avt {
         }
 
         void resetPoints() {
-            std::cout << "reset neutral" << std::endl;
             for (int i = 0; i < 68; ++i) {
                 neutralTrackPts[i] = nextTrackPts[i];
                 motionTrackPts[i].x = 0;
@@ -203,12 +202,11 @@ namespace avt {
 
 
                 this->direction = calcHorizontalGlobalDirection(prevTrackPts, nextTrackPts);
-                std::cout << "direction: " << direction << std::endl;
 
                 // if the face is moving so fast, use dlib to detect the face
                 double diff = calDistanceDiff(prevTrackPts, nextTrackPts);
                 this->variance = diff;
-                std::cout << "variance: " << diff << std::endl;
+                //                std::cout << "variance: " << diff << std::endl;
                 if (diff > 1.0) {
                     //                        std::cout<< "DLIB" << std::endl;
                     for (int i = 0; i < d.num_parts(); i++) {
@@ -257,9 +255,6 @@ namespace avt {
             }
 
             // Update Motion
-            std::cout << "currentpoint: " << nextTrackPts[57] << std::endl;
-            std::cout << "neutralpoint: " << neutralTrackPts[57] << std::endl;
-            std::cout << "motionPoint: " << motionTrackPts[57] << std::endl;
             for (int i = 0; i < 68; ++i) {
 /*                 motionTrackPts[i].x = (prevTrackPts[i].x - predictPoints[i].x) / 320.0;//160.0; */
 /*                 motionTrackPts[i].y = (prevTrackPts[i].y - predictPoints[i].y) / 180.0;//120.0; */

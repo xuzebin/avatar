@@ -13,3 +13,4 @@ target_link_libraries(HeadPoseEstimation ${OpenCV_LIBS} dlib::dlib AvatarClient)
 
 SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
 
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/shape_predictor_68_face_landmarks.dat DESTINATION ${CMAKE_BINARY_DIR}/bin)

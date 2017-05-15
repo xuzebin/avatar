@@ -11,6 +11,4 @@ include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})
 
 add_library(GFrame STATIC ${SRC_FILES})
 
-#install(TARGETS GFrame DESTINATION ${PROJECT_SOURCE_DIR}/lib)
-
 SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")

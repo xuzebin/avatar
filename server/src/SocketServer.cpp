@@ -1,4 +1,5 @@
 #include "SocketServer.h"
+#include <iostream>
 
 namespace avt {
     SocketServer::SocketServer(std::shared_ptr<BufferData> bufferData) : bufferData(bufferData)

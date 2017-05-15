@@ -1,7 +1,6 @@
 #ifndef SOCKETSERVER_H
 #define SOCKETSERVER_H
 #include "Socket.h"
-#include "BlockingQueue.h"
 #include "BufferData.h"
 
 namespace avt  {

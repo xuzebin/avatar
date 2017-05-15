@@ -13,6 +13,7 @@ This project is still under development.
 * GLUT
 * dlib (included)
 * GFrame (included)
+* CMake
 
 ## How to Compile
 This will build all the libraries and executables.
@@ -27,29 +28,40 @@ make install
 
 ## Running Head Pose Avatar
 
+All executables are installed in `build/bin/`
+
 #### Run FaceViewer
+
+```
+./FaceViewer face.obj shaders/ 5055
+```
+* Arguments: `./FaceViewer [obj file] [shaders dirctory] [port number]`
+
+Or directly run a default version (same as the above one)
 
 ```
 ./FaceViewer
 ```
-This will:
 
-* Start rendering the face mask.
-* Start a server listening to port 5055 by default, or you can change it by adding the port number after the `./FaceViewer`)
+This will
 
-#### Run capture client
+* Start rendering a face mask.
+* Start a separate thread running a server. It will transform the face model using the pose data sent from the capture client.
+
+#### Run Capture Client
 Open another terminal and run the client for capturing head pose.
 
 ```
 ./HeadPoseEstimation
 ```
 
-This will:
-
-* By default it is connected to localhost:5055, or you can customize it by running: 
+* By default the above command it reads in the pose model file located in current directory, and connected to localhost:5055. You can customize it by running: 
 ```
 ./HeadPoseEstimation shape_predictor_68_face_landmarks.dat [ip-address] [port number]
 ```
-* Open a camera (by default connected to device 0), capture facial landmark and estimate your head pose in realtime.
+
+This will
+
+* Open a camera (by default connected to device 0), capture facial landmark on your face and estimate head pose in realtime.
 
 * Press key `s` to start streaming pose data to server so you can see your avatar mimicking your head pose.
