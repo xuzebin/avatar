@@ -5,7 +5,7 @@ project(FaceViewer)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 
-SET(GFRAME_SRC_DIR ${CMAKE_SOURCE_DIR}/libs/renderer)
+SET(GFRAME_SRC_DIR ${CMAKE_SOURCE_DIR}/libs/GFrame)
 SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
 
 include_directories(${CMAKE_SOURCE_DIR}/client/include)
@@ -18,6 +18,6 @@ add_executable(FaceViewer ${SERVER_SRC} ${CMAKE_SOURCE_DIR}/client/src/Socket.cp
 
 target_link_libraries(FaceViewer ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} GFrame)
 
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/libs/renderer/assets/models/face/face.obj DESTINATION ${CMAKE_BINARY_DIR}/bin)
-INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/libs/renderer/shaders DESTINATION ${CMAKE_BINARY_DIR}/bin)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/libs/GFrame/assets/models/face/face.obj DESTINATION ${CMAKE_BINARY_DIR}/bin)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/libs/GFrame/shaders DESTINATION ${CMAKE_BINARY_DIR}/bin)
 
