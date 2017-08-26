@@ -65,3 +65,7 @@ This will
 * Open a camera (by default connected to device 0), capture facial landmark on your face and estimate head pose in realtime.
 
 * Press key `s` to start streaming pose data to server so you can see your avatar mimicking your head pose.
+
+## Demo
+* [https://youtu.be/WqK0lBP0K7g](https://youtu.be/WqK0lBP0K7g)
+* [https://youtu.be/2-xo8OPWjaA](https://youtu.be/2-xo8OPWjaA)
